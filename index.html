@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GK Voice Game</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+margin:0;font-family:Arial,sans-serif;
+background:linear-gradient(135deg,#101828,#1d4ed8);
+color:white;min-height:100vh;
+display:flex;justify-content:center;align-items:center;
+}
+.game{
+width:94%;max-width:500px;
+background:#ffffff12;border:1px solid #ffffff25;
+border-radius:25px;padding:20px;text-align:center;
+box-shadow:0 10px 40px #0008;
+}
+h1{font-size:30px}
+.top{
+display:flex;justify-content:space-between;
+background:#0004;padding:12px;border-radius:15px;
+}
+.question{font-size:22px;font-weight:bold;margin:25px 0}
+.timer{font-size:30px;font-weight:bold;margin:15px}
+.option{
+width:100%;padding:15px;margin:8px 0;
+border:0;border-radius:14px;background:white;
+color:#111827;font-size:18px;font-weight:bold;
+}
+.option:disabled{opacity:.6}
+.message{min-height:35px;font-size:19px;font-weight:bold;margin:15px 0}
+.start{
+padding:15px 35px;border:0;border-radius:15px;
+background:#22c55e;color:white;font-size:20px;font-weight:bold;
+}
+</style>
+
+<style id="purple-back-buttons">
+#classBackButton,
+button[onclick="closeClassMenu()"],
+button[onclick^="showClasses()"],
+button[onclick^="showClassSubjects("],
+button[onclick^="showClassChapters("],
+button[onclick^="showClassChapterLevels("] {
+  background-color: #8e44ad !important;
+  color: white !important;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="game">
+
+<h1>🧠 GK GAME</h1>
+
+<div class="top">
+<span>🏆 Level: <b id="level">1</b></span>
+<span>🪙 Coins: <b id="coins">0</b></span>
+<button id="testPaperBtn" style="display:none;margin-left:8px;padding:6px 10px;border-radius:10px;border:0;" onclick="startTestPaper()">📝 Test Paper</button>
+</div>
+
+<div id="question" class="question">
+गेम शुरू करने के लिए Start दबाएँ
+</div>
+
+<div id="timer" class="timer">10</div>
+
+<div id="options"></div>
+
+<div id="message" class="message"></div>
+
+<button class="start" onclick="startGame()">▶ General Knowledge</button><div style="height:15px"></div><button class="start" onclick="showLevels()">📚 Levels</button><div style="height:15px"></div><button class="start" onclick="showClasses()">📚 कक्षा 1–10</button>
+
+</div>
+
+<script src="questions.js"></script>
+
+<script src="chapter-data/up-government-books.js"></script>
+<script src="chapter-data/chapters.js"></script>
+
+<script>
+
+let coins=Number(localStorage.getItem('gkCoins')||0);
+let currentQuestion=0;
+let currentLevel=1;
+let time=10;
+let timer;
+let correctAnswers=0;
+let wrongAnswers=0;
+let audioCtx;
+
+let questions=[
+{
+q:"भारत की राजधानी क्या है?",
+options:["मुंबई","नई दिल्ली","जयपुर","लखनऊ"],
+answer:1
+},
+{
+q:"भारत का राष्ट्रीय पशु कौन है?",
+options:["शेर","हाथी","बाघ","घोड़ा"],
+answer:2
+},
+{
+q:"भारत का राष्ट्रीय पक्षी कौन है?",
+options:["कबूतर","मोर","तोता","गरुड़"],
+answer:1
+},
+{
+q:"सूर्य किस दिशा से निकलता है?",
+options:["उत्तर","दक्षिण","पूर्व","पश्चिम"],
+answer:2
+},
+{
+q:"पृथ्वी का उपग्रह कौन है?",
+options:["सूर्य","चंद्रमा","मंगल","शुक्र"],
+answer:1
+},
+{
+q:"भारत का राष्ट्रीय चिन्ह क्या है?",
+options:["कमल","अशोक स्तंभ","तिरंगा","चक्र"],
+answer:1
+},
+{
+q:"भारत का राष्ट्रीय गान किसने लिखा था?",
+options:["महात्मा गांधी","रवींद्रनाथ टैगोर","सुभाष चंद्र बोस","सरोजिनी नायडू"],
+answer:1
+},
+{
+q:"भारत का सबसे बड़ा राज्य क्षेत्रफल के आधार पर कौन सा है?",
+options:["महाराष्ट्र","राजस्थान","उत्तर प्रदेश","मध्य प्रदेश"],
+answer:1
+},
+{
+q:"भारत का सबसे छोटा राज्य क्षेत्रफल के आधार पर कौन सा है?",
+options:["गोवा","सिक्किम","त्रिपुरा","मणिपुर"],
+answer:0
+},
+{
+q:"भारत में गणतंत्र दिवस कब मनाया जाता है?",
+options:["15 अगस्त","26 जनवरी","2 अक्टूबर","14 नवंबर"],
+answer:1
+}
+];
+
+const level2Questions=[
+{q:"भारत का राष्ट्रीय फूल कौन सा है?",options:["गुलाब","कमल","सूरजमुखी","चमेली"],answer:1},
+{q:"भारत का राष्ट्रीय फल कौन सा है?",options:["सेब","केला","आम","संतरा"],answer:2},
+{q:"भारत का राष्ट्रीय वृक्ष कौन सा है?",options:["नीम","बरगद","पीपल","आम"],answer:1},
+{q:"भारत का राष्ट्रीय जलीय जीव कौन है?",options:["डॉल्फिन","व्हेल","मगरमच्छ","कछुआ"],answer:0},
+{q:"भारत का राष्ट्रीय खेल किसे कहा जाता है?",options:["क्रिकेट","हॉकी","फुटबॉल","कबड्डी"],answer:1},
+{q:"भारत में कुल कितने राज्य हैं?",options:["26","28","29","30"],answer:1},
+{q:"भारत की मुद्रा क्या है?",options:["डॉलर","रुपया","येन","पाउंड"],answer:1},
+{q:"ताजमहल किस शहर में है?",options:["दिल्ली","जयपुर","आगरा","लखनऊ"],answer:2},
+{q:"भारत का राष्ट्रीय गीत कौन सा है?",options:["वंदे मातरम्","जन गण मन","सारे जहाँ से अच्छा","ऐ मेरे वतन"],answer:0},
+{q:"भारत का राष्ट्रीय ध्वज किस नाम से जाना जाता है?",options:["तिरंगा","केसरिया","भारत ध्वज","विजय ध्वज"],answer:0}
+];
+const level4Questions=[
+{q:"भारत का सबसे बड़ा मरुस्थल कौन सा है?",options:["थार","गोबी","सहारा","कालाहारी"],answer:0},
+{q:"भारत में सबसे अधिक चाय उत्पादन किस राज्य में होता है?",options:["असम","गुजरात","पंजाब","बिहार"],answer:0},
+{q:"कुतुब मीनार किस शहर में स्थित है?",options:["मुंबई","दिल्ली","जयपुर","लखनऊ"],answer:1},
+{q:"भारतीय संविधान कब लागू हुआ?",options:["15 अगस्त 1947","26 जनवरी 1950","26 नवंबर 1949","2 अक्टूबर 1950"],answer:1},
+{q:"पृथ्वी का सबसे बड़ा महाद्वीप कौन सा है?",options:["अफ्रीका","एशिया","यूरोप","ऑस्ट्रेलिया"],answer:1},
+{q:"सौरमंडल का सबसे बड़ा ग्रह कौन सा है?",options:["शनि","पृथ्वी","बृहस्पति","मंगल"],answer:2},
+{q:"पानी का क्वथनांक समुद्र तल पर लगभग कितना होता है?",options:["50°C","75°C","100°C","150°C"],answer:2},
+{q:"मानव शरीर में रक्त को पंप करने वाला अंग कौन सा है?",options:["फेफड़ा","हृदय","यकृत","गुर्दा"],answer:1},
+{q:"कंप्यूटर में डेटा स्थायी रूप से रखने के लिए इनमें से क्या उपयोग होता है?",options:["मॉनिटर","कीबोर्ड","स्टोरेज","माउस"],answer:2},
+{q:"इंद्रधनुष में सामान्यतः कितने रंग माने जाते हैं?",options:["5","6","7","8"],answer:2}
+];
+
+const level5Questions=[
+{q:"भारत का सबसे लंबा समुद्र तट किस राज्य में है?",options:["गुजरात","तमिलनाडु","केरल","ओडिशा"],answer:1},
+{q:"विश्व का सबसे ऊँचा पर्वत कौन सा है?",options:["K2","माउंट एवरेस्ट","कंचनजंघा","नंदा देवी"],answer:1},
+{q:"मानव शरीर में सामान्यतः कितने दाँत होते हैं?",options:["28","30","32","34"],answer:2},
+{q:"सूर्य एक क्या है?",options:["ग्रह","उपग्रह","तारा","धूमकेतु"],answer:2},
+{q:"भारत की सबसे बड़ी मीठे पानी की झील कौन सी है?",options:["वूलर झील","डल झील","चिल्का झील","सांभर झील"],answer:0},
+{q:"किस धातु को सामान्य तापमान पर तरल अवस्था में पाया जाता है?",options:["लोहा","तांबा","पारा","सोना"],answer:2},
+{q:"विश्व पर्यावरण दिवस कब मनाया जाता है?",options:["5 जून","15 अगस्त","2 अक्टूबर","22 अप्रैल"],answer:0},
+{q:"भारत का राष्ट्रीय पशु बाघ किस परिवार से संबंधित है?",options:["बिल्ली परिवार","कुत्ता परिवार","घोड़ा परिवार","भालू परिवार"],answer:0},
+{q:"वायुमंडल में सबसे अधिक मात्रा में कौन सी गैस है?",options:["ऑक्सीजन","नाइट्रोजन","कार्बन डाइऑक्साइड","हाइड्रोजन"],answer:1},
+{q:"ओलंपिक खेल कितने वर्षों के अंतराल पर आयोजित होते हैं?",options:["2 वर्ष","3 वर्ष","4 वर्ष","5 वर्ष"],answer:2}
+];
+
+const level3Questions=[
+{q:"भारत में कितने केंद्र शासित प्रदेश हैं?",options:["6","8","10","12"],answer:1},
+{q:"भारत की सबसे लंबी नदी कौन सी है?",options:["यमुना","गंगा","गोदावरी","नर्मदा"],answer:1},
+{q:"सूर्य के सबसे निकट कौन सा ग्रह है?",options:["पृथ्वी","शुक्र","बुध","मंगल"],answer:2},
+{q:"लाल ग्रह किसे कहा जाता है?",options:["बृहस्पति","मंगल","शनि","शुक्र"],answer:1},
+{q:"जल का रासायनिक सूत्र क्या है?",options:["CO₂","O₂","H₂O","N₂"],answer:2},
+{q:"भारत का सबसे ऊँचा पर्वत शिखर कौन सा है?",options:["नंदा देवी","कंचनजंघा","धौलागिरी","अन्नपूर्णा"],answer:1},
+{q:"पौधे प्रकाश संश्लेषण में किस गैस का उपयोग करते हैं?",options:["ऑक्सीजन","नाइट्रोजन","कार्बन डाइऑक्साइड","हाइड्रोजन"],answer:2},
+{q:"भारत का राष्ट्रीय पशु किस वर्ष घोषित किया गया था?",options:["1950","1962","1972","1980"],answer:2},
+{q:"विश्व का सबसे बड़ा महासागर कौन सा है?",options:["अटलांटिक महासागर","हिंद महासागर","प्रशांत महासागर","आर्कटिक महासागर"],answer:2},
+{q:"कंप्यूटर का मस्तिष्क किसे कहा जाता है?",options:["मॉनिटर","कीबोर्ड","CPU","माउस"],answer:2}
+];
+
+
+/* ===== TEST PAPER SYSTEM ===== */
+
+const level1Questions = questions.slice(0,10);
+
+function getTestQuestionsForLevel(level){
+  if(level===1) return level1Questions;
+  if(level===2) return level2Questions;
+  if(level===3) return level3Questions;
+  if(level===4) return level4Questions;
+  if(level===5) return level5Questions;
+
+  if(typeof questionBank!=="undefined" && questionBank[level]){
+    return questionBank[level];
+  }
+
+  return [];
+}
+
+function getPlayedTestQuestions(){
+  let pool=[];
+
+  for(let level=1;level<=1000;level++){
+    if(localStorage.getItem("level"+level+"Played")){
+      let qs=getTestQuestionsForLevel(level);
+      qs.forEach(q=>{
+        pool.push({
+          q:q.q,
+          options:q.options,
+          answer:q.answer,
+          level:level
+        });
+      });
+    }
+  }
+
+  return pool;
+}
+
+function shuffleTestQuestions(arr){
+  let a=arr.slice();
+
+  for(let i=a.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+
+  return a;
+}
+
+function startTestPaper(){
+
+  let pool=getPlayedTestQuestions();
+
+  if(pool.length<50){
+    document.querySelector(".game").innerHTML=
+      "<h1>📝 Test Paper</h1>"+
+      "<h2>अभी 50 प्रश्न उपलब्ध नहीं हैं।</h2>"+
+      "<p>कम से कम 50 खेले हुए प्रश्न चाहिए।</p>"+
+      "<p>अभी उपलब्ध प्रश्न: "+pool.length+"</p>"+
+      "<br><button class='start' onclick='showLevels()'>📚 Levels</button>";
+    return;
+  }
+
+  window.testQuestions=shuffleTestQuestions(pool).slice(0,50);
+
+  let html="<h1>📝 Test Paper</h1>";
+  html+="<p><b>50 प्रश्न × 2 अंक = 100 अंक</b></p>";
+
+  testQuestions.forEach((q,i)=>{
+
+    html+="<div class='test-question'>";
+    html+="<h3>प्रश्न "+(i+1)+"/50</h3>";
+    html+="<p><b>"+q.q+"</b></p>";
+
+    q.options.forEach((op,j)=>{
+      let letter=String.fromCharCode(65+j);
+
+      html+=
+        "<label style='display:block;text-align:left;background:rgba(255,255,255,.12);padding:12px;margin:8px 0;border-radius:12px;cursor:pointer;'>"+
+        "<input type='radio' name='testQ"+i+"' value='"+j+"'> "+
+        letter+". "+op+
+        "</label>";
+    });
+
+    html+="</div>";
+  });
+
+  html+=
+    "<button class='start' onclick='submitTestPaper()'>📤 पेपर जमा करें</button>"+
+    "<br><br><button class='start' onclick='showLevels()'>📚 Levels</button>";
+
+  document.querySelector(".game").innerHTML=html;
+}
+
+function submitTestPaper(){
+
+  if(!window.testQuestions || testQuestions.length!==50){
+    return;
+  }
+
+  let score=0;
+  let attempted=0;
+
+  testQuestions.forEach((q,i)=>{
+
+    let selected=document.querySelector(
+      "input[name='testQ"+i+"']:checked"
+    );
+
+    if(selected){
+      attempted++;
+
+      if(Number(selected.value)===q.answer){
+        score+=2;
+      }
+    }
+  });
+
+  let percentage=score;
+
+  let result={
+    score:score,
+    total:100,
+    percentage:percentage,
+    attempted:attempted,
+    date:new Date().toLocaleString("hi-IN")
+  };
+
+  localStorage.setItem(
+    "gkTestResult",
+    JSON.stringify(result)
+  );
+
+  coins=0;
+  localStorage.setItem("gkCoins","0");
+
+  if(document.getElementById("coins")){
+    document.getElementById("coins").innerText="0";
+  }
+
+  showTestResult();
+}
+
+function showTestResult(){
+
+  let saved=localStorage.getItem("gkTestResult");
+
+  if(!saved){
+    document.querySelector(".game").innerHTML=
+      "<h1>📊 Test Result</h1>"+
+      "<p>अभी कोई Test Paper Result नहीं है।</p>"+
+      "<button class='start' onclick='showLevels()'>📚 Levels</button>";
+    return;
+  }
+
+  let r=JSON.parse(saved);
+
+  document.querySelector(".game").innerHTML=
+    "<h1>🎉 Test Paper Result</h1>"+
+    "<h2>📊 आपका Result</h2>"+
+    "<p>📝 कुल अंक: <b>100</b></p>"+
+    "<p>🏆 प्राप्त अंक: <b>"+r.score+"</b></p>"+
+    "<p>📈 Percentage: <b>"+r.percentage+"%</b></p>"+
+    "<p>✅ Attempt किए: <b>"+r.attempted+"/50</b></p>"+
+    "<p>🪙 Coins: <b>0</b></p>"+
+    "<p>📅 "+r.date+"</p>"+
+    "<br><button class='start' onclick='showLevels()'>📚 Levels</button>";
+}
+
+function speakText(text,done){
+let finished=false;
+let timer=null;
+
+function finish(){
+ if(finished)return;
+ finished=true;
+ if(timer)clearTimeout(timer);
+ if(typeof done==="function")done();
+}
+
+try{
+ if(!("speechSynthesis" in window) ||
+    !("SpeechSynthesisUtterance" in window)){
+   console.error("Browser speech synthesis available nahi hai");
+   finish();
+   return;
+ }
+
+ speechSynthesis.cancel();
+
+ let voice=new SpeechSynthesisUtterance(String(text));
+ voice.lang="hi-IN";
+ voice.rate=0.85;
+ voice.pitch=1;
+ voice.volume=1;
+
+ let voices=speechSynthesis.getVoices();
+ let hindiVoice=voices.find(v=>/^hi(-|_)/i.test(v.lang));
+ if(hindiVoice)voice.voice=hindiVoice;
+
+ voice.onend=finish;
+ voice.onerror=function(e){
+   console.error("Voice error:",e.error);
+   finish();
+ };
+
+ timer=setTimeout(function(){
+   if(!finished){
+     console.warn("Voice timeout");
+     finish();
+   }
+ },20000);
+
+ speechSynthesis.speak(voice);
+}catch(e){
+ console.error("Voice error:",e);
+ finish();
+}
+}
+function tickSound(){
+
+if(!audioCtx)return;
+
+let o=audioCtx.createOscillator();
+let g=audioCtx.createGain();
+
+o.frequency.value=900;
+g.gain.value=0.08;
+
+o.connect(g);
+g.connect(audioCtx.destination);
+
+o.start();
+o.stop(audioCtx.currentTime+0.08);
+}
+
+function startGame(){
+
+speechSynthesis.cancel();
+
+audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+
+let selectedLevel=Number(new URLSearchParams(location.search).get("level")||1);
+
+currentLevel=selectedLevel;
+
+let builtInQuestionBank={
+1:questions.slice(0,10),
+2:level2Questions,
+3:level3Questions,
+4:level4Questions,
+5:level5Questions
+};
+
+questions=builtInQuestionBank[selectedLevel]||questionBank[selectedLevel]||[];
+
+document.getElementById("level").innerText=currentLevel;
+
+currentQuestion=0;
+correctAnswers=0;
+wrongAnswers=0;
+
+document.querySelector(".start").style.display="none";
+
+document.getElementById("level").innerText=currentLevel;
+
+showQuestion();
+}
+
+function showQuestion(){
+
+clearInterval(timer);
+speechSynthesis.cancel();
+
+if(currentQuestion>=questions.length){
+endGame();
+return;
+}
+
+let q=questions[currentQuestion];
+
+let oldHome=document.getElementById("homeBtn");
+if(oldHome) oldHome.remove();
+
+let home=document.createElement("button");
+home.id="homeBtn";
+home.className="start";
+home.innerText="📝 Test Paper"; home.style.display=coins>=1000 ? "inline-block" : "none"; home.onclick=function(){ startTestPaper(); };
+home.onclick=function(){
+clearInterval(timer);
+speechSynthesis.cancel();
+showLevels();
+};
+
+document.querySelector(".game").insertBefore(
+home,
+document.getElementById("question")
+);
+
+document.getElementById("question").innerText=
+"प्रश्न "+(currentQuestion+1)+"/"+questions.length+"\n"+q.q;
+document.getElementById("message").innerText="";
+document.getElementById("options").innerHTML="";
+
+q.options.forEach((option,index)=>{
+
+let btn=document.createElement("button");
+
+btn.className="option";
+btn.innerText=String.fromCharCode(65+index)+". "+option;
+btn.disabled=true;
+
+btn.onclick=function(){
+checkAnswer(index);
+};
+
+document.getElementById("options").appendChild(btn);
+
+});
+
+document.getElementById("timer").innerText="🔊";
+
+let text=
+q.q+
+"। A — "+q.options[0]+
+"। B — "+q.options[1]+
+"। C — "+q.options[2]+
+"। D — "+q.options[3];
+
+speakText(text,function(){
+
+document.querySelectorAll(".option").forEach(btn=>{
+btn.disabled=false;
+});
+
+startTimer();
+
+});
+
+}
+
+function startTimer(){
+
+time=10;
+document.getElementById("timer").innerText=time;
+
+timer=setInterval(function(){
+
+time--;
+
+document.getElementById("timer").innerText=time;
+
+tickSound();
+
+if(time<=0){
+
+clearInterval(timer);
+timeOut();
+
+}
+
+},1000);
+
+}
+
+function checkAnswer(index){
+
+clearInterval(timer);
+speechSynthesis.cancel();
+
+let q=questions[currentQuestion];
+
+if(index===q.answer){
+
+document.querySelectorAll(".option").forEach((btn,i)=>{
+btn.disabled=true;
+if(i===q.answer){
+btn.style.background="#22c55e";
+btn.innerText="✔️ "+(i+1)+". "+q.options[i];
+}
+});
+
+correctAnswers++;
+coins+=10;
+
+localStorage.setItem('gkCoins',coins); document.getElementById("coins").innerText=coins;
+
+document.getElementById("message").innerText=
+"✅ सही है! आपने 10 Coins जीते।";
+
+speakText("सही है! आपने 10 Coins जीते।");
+
+}else{
+
+document.querySelectorAll(".option").forEach((btn,i)=>{
+btn.disabled=true;
+if(i===index){
+btn.style.background="#ef4444";
+btn.style.color="white";
+btn.innerText="❌ "+(i+1)+". "+q.options[i];
+}
+if(i===q.answer){
+btn.style.background="#22c55e";
+btn.innerText="✔️ "+(i+1)+". "+q.options[i];
+}
+});
+
+wrongAnswers++;
+
+document.getElementById("message").innerText=
+"❌ गलत है! सही उत्तर है — "+q.options[q.answer];
+
+speakText(
+"गलत है! सही उत्तर है — "+q.options[q.answer]
+);
+
+}
+
+currentQuestion++;
+
+setTimeout(function(){
+
+let next=document.createElement("button");
+next.id="nextBtn";
+next.className="start";
+next.innerText="➡️ अगला सवाल";
+next.onclick=function(){
+next.remove();
+showQuestion();
+};
+
+document.getElementById("options").appendChild(next);
+
+},1800);
+
+}
+
+function timeOut(){
+
+speechSynthesis.cancel();
+
+let q=questions[currentQuestion];
+
+let buttons=document.querySelectorAll(".option");
+
+buttons[q.answer].innerText=
+"✅ "+q.options[q.answer]+" ✔️";
+
+buttons[q.answer].style.background="#22c55e";
+
+document.getElementById("message").innerText=
+"⏰ समय समाप्त! सही उत्तर है — "+q.options[q.answer];
+
+speakText(
+"समय समाप्त! सही उत्तर है — "+q.options[q.answer]
+);
+
+wrongAnswers++;
+
+currentQuestion++;
+
+setTimeout(function(){
+
+let next=document.createElement("button");
+next.id="nextBtn";
+next.className="start";
+next.innerText="➡️ अगला सवाल";
+next.onclick=function(){
+next.remove();
+showQuestion();
+};
+
+document.getElementById("options").appendChild(next);
+
+},2200);
+
+}
+
+function showLevels(){
+  let html="<h1>📚 सभी Levels</h1>";
+
+  let highestPlayed=0;
+
+  for(let i=1;i<=1000;i++){
+    if(localStorage.getItem("level"+i+"Played")){
+      highestPlayed=i;
+    }
+  }
+
+  let nextLevel=Math.min(highestPlayed+1,1000);
+
+  /* पहली बार 1000 Coins होने पर Test Paper को इसी Level के नीचे लॉक कर दो */
+  if(coins>=1000 && !localStorage.getItem("gkTestPaperLevel")){
+    localStorage.setItem("gkTestPaperLevel",String(nextLevel));
+  }
+
+  let testLevel=Number(localStorage.getItem("gkTestPaperLevel")||0);
+  let testResult=localStorage.getItem("gkTestResult");
+
+  for(let i=1;i<=1000;i++){
+
+    let played=localStorage.getItem("level"+i+"Played");
+    let unlocked=(i===1)||localStorage.getItem("level"+(i-1)+"Played");
+
+    let cls=(!played && i===nextLevel)
+      ? "level-row new-open-level"
+      : "level-row";
+
+    html+="<p class='"+cls+"'>Level "+i+" ";
+
+    if(played){
+      html+="✅ खेला हुआ";
+    }else if(i===nextLevel){
+      html+="🆕 नया खुला हुआ";
+    }else{
+      html+="🔒 लॉक";
+    }
+
+    if(unlocked){
+      html+=" <button class='start' onclick='playLevel("+i+")'>▶️ खेलें</button>";
+    }
+
+    html+="</p>";
+
+    /* Test Paper हमेशा उसी Level के नीचे रहेगा */
+    if(i===testLevel){
+
+      if(testResult){
+        html+=
+          "<div style='margin:-4px 0 12px 20px;'>"+
+          "<button class='start' onclick='showTestResult()'>📊 Test Result देखें</button>"+
+          "</div>";
+      }else{
+        html+=
+          "<div style='margin:-4px 0 12px 20px;'>"+
+          "<button class='start' onclick='startTestPaper()'>📝 Test Paper</button>"+
+          "</div>";
+      }
+    }
+  }
+
+  html+="<br><button class='start' onclick='location.reload()'>⬅️ वापस</button>";
+
+  document.querySelector(".game").innerHTML=
+    '<div id="levelList" class="level-list" style="height:70vh;max-height:70vh;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;padding:14px;">'
+    +html+
+    '</div>';
+
+  setTimeout(function(){
+    let list=document.getElementById("levelList");
+    let target=list.querySelector(".new-open-level");
+
+    if(target){
+      target.scrollIntoView({
+        behavior:"auto",
+        block:"center"
+      });
+    }
+  },200);
+}
+
+function playLevel(level){
+
+location.href="?level="+level;
+}
+
+function startLevel2(){
+location.href="?level=2";
+}
+function endGame(){
+
+speechSynthesis.cancel();
+
+localStorage.setItem("level"+currentLevel+"Played","yes");
+
+document.querySelector(".game").innerHTML=
+
+"<h1>🎉 Level पूरा!</h1>"+
+"<h2>📊 Result</h2>"+
+"<p>🏆 Level: "+currentLevel+"</p>"+
+"<p>✅ खेला हुआ</p>"+
+"<p>✅ सही उत्तर: "+correctAnswers+"</p>"+
+"<p>❌ गलत उत्तर: "+wrongAnswers+"</p>"+
+"<p>🪙 Coins: "+coins+"</p>"+
+"<button class='start' onclick='showLevels()'>📚 सभी Levels</button><br><br><button class='start' onclick='location.reload()'>🔄 फिर से खेलें</button>";
+
+}
+
+</script>
+
+
+<script>
+
+
+function installBrijeshVoiceControl() {
+  if (document.getElementById("brijeshVoiceButton")) return;
+
+  const button = document.createElement("button");
+  button.id = "brijeshVoiceButton";
+  button.textContent = "🎤";
+  button.style.cssText =
+    "position:fixed;bottom:18px;right:16px;z-index:10001;" +
+    "width:48px;height:48px;padding:0;border:0;border-radius:50%;" +
+    "background:#f59e0b;color:#111;font-size:24px;" +
+    "box-shadow:0 2px 8px #0006;";
+  document.body.appendChild(button);
+
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let listening = false;
+  let restarting = false;
+
+  function say(message) {
+    if (typeof speakText === "function") speakText(message);
+  }
+
+  function runCommand(rawText) {
+    const text = rawText.toLowerCase()
+      .replace(/[.,!?।]/g, "")
+      .replace(/brijesh|बृजेश|ब्रिजेश/g, "")
+      .trim();
+
+    console.log("Brijesh Voice Command:", text);
+
+    // General Knowledge के Levels खोलना
+    if (/general knowledge.*(लेवल|लेवल्स|levels)|जनरल नॉलेज.*(लेवल|लेवल्स|levels)|जीके.*(लेवल|लेवल्स|levels)/i.test(text)) {
+      if (typeof showLevels === "function") showLevels();
+      else say("जनरल नॉलेज की लेवल सूची नहीं मिली");
+      return;
+    }
+
+    // General Knowledge के Levels खोलना
+    if (/general knowledge.*(लेवल|लेवल्स|levels)|जनरल नॉलेज.*(लेवल|लेवल्स|levels)|जीके.*(लेवल|लेवल्स|levels)/i.test(text)) {
+      if (typeof showLevels === "function") showLevels();
+      else say("जनरल नॉलेज की लेवल सूची नहीं मिली");
+      return;
+    }
+
+    // General Knowledge मुख्य गेम
+    if (/general knowledge|जनरल नॉलेज|जीके गेम|मुख्य गेम/.test(text)) {
+      if (typeof startGame === "function") startGame();
+      else say("मुख्य गेम का बटन नहीं मिला");
+      return;
+    }
+
+    // अगला सवाल — क्लास टेस्ट या मुख्य GK
+    if (/अगला सवाल|अगला प्रश्न|next question|आगे बढ़ो/.test(text)) {
+      const next = document.getElementById("classNext");
+      if (next && !next.disabled) {
+        next.click();
+        return;
+      }
+      const mainNext = document.getElementById("nextBtn") ||
+                       document.getElementById("nextQuestionBtn");
+      if (mainNext) {
+        mainNext.click();
+        return;
+      }
+      say("अगले सवाल का बटन अभी उपलब्ध नहीं है");
+      return;
+    }
+
+    // वापस जाना — वर्तमान पेज के अनुसार
+    if (/वापस जाओ|पीछे जाओ|back|बैक|वापस|पीछे|लेवल पर जाओ|level page/.test(text)) {
+      const questionBack = document.getElementById("classBackButton");
+
+      if (questionBack) {
+        questionBack.click();
+        return;
+      }
+
+      const box = document.getElementById("classMenuOverlay");
+      const buttons = box ? Array.from(box.querySelectorAll("button")) : [];
+      const backButton = buttons.reverse().find(btn =>
+        /वापस अध्याय चुनें|वापस विषय चुनें|वापस कक्षा चुनें|कक्षाएँ|वापस गेम में/.test(btn.textContent)
+      );
+
+      if (backButton) {
+        backButton.click();
+      } else {
+        say("इस पेज पर वापस जाने का बटन नहीं मिला");
+      }
+      return;
+    }
+
+    // उत्तर A/B/C/D
+    const optionMatch = text.match(
+      /(?:विकल्प|option|उत्तर)\s*(?:नंबर\s*)?([abcdअआबबीससीदडी])/i
+    );
+    if (optionMatch) {
+      const letter = optionMatch[1].toLowerCase();
+      const indexes = {
+        a:0, b:1, c:2, d:3,
+        "अ":0, "आ":0, "ब":1, "बी":1,
+        "स":2, "सी":2, "द":3, "डी":3
+      };
+      const idx = indexes[letter];
+      if (idx !== undefined) {
+        const classButtons = document.querySelectorAll(".class-answer");
+        if (classButtons.length && typeof window.answerClassQuestion === "function") {
+          if (!classButtons[idx].disabled) {
+            window.answerClassQuestion(idx);
+          } else {
+            say("पहले सवाल की आवाज पूरी होने दें");
+          }
+          return;
+        }
+
+        const mainButtons = document.querySelectorAll("#options .option");
+        if (mainButtons.length && !mainButtons[idx].disabled) {
+          mainButtons[idx].click();
+          return;
+        }
+
+        say("विकल्प अभी तैयार नहीं हैं। सवाल की आवाज पूरी होने दें।");
+        return;
+      }
+      say("इस सवाल के विकल्प अभी नहीं मिले");
+      return;
+    }
+
+    // कक्षा 1 से 10 — अंक, हिंदी और अंग्रेज़ी के नंबर
+    const classMatch = text.match(/(?:class|क्लास|कक्षा)\s*(10|1|2|3|4|5|6|7|8|9|एक|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|one|two|three|four|five|six|seven|eight|nine|ten)/i);
+    if (classMatch) {
+      const numbers = {
+        "एक":1, "दो":2, "तीन":3, "चार":4, "पाँच":5, "पांच":5,
+        "छह":6, "छः":6, "सात":7, "आठ":8, "नौ":9, "दस":10,
+        "one":1, "two":2, "three":3, "four":4, "five":5,
+        "six":6, "seven":7, "eight":8, "nine":9, "ten":10
+      };
+      const spoken = classMatch[1].toLowerCase();
+      const n = numbers[spoken] || Number(spoken);
+      if (n >= 1 && n <= 10 && typeof showClassSubjects === "function") {
+        showClassSubjects(n);
+        say("कक्षा " + n + " खोल दी है");
+      } else {
+        say("कक्षा 1 से 10 तक चुनिए");
+      }
+      return;
+    }
+    if (/(?:class|क्लास|कक्षा)/.test(text)) {
+      if (typeof showClasses === "function") showClasses();
+      say("अपनी कक्षा चुनिए");
+      return;
+    }
+
+    // विषय का नाम — उपलब्ध विषयों में मिलान
+    if (/(?:हिंदी|hindi|गणित|math|maths|अंग्रेजी|अंग्रेज़ी|english|विज्ञान|science|सामाजिक विज्ञान|social science|पर्यावरण|evs)/i.test(text)) {
+      const subjects = window.chapterData;
+      const heading = document.querySelector("h2");
+      const headingText = heading ? heading.innerText : "";
+      const cm = headingText.match(/कक्षा\s*(\d+)/);
+      const chosenClass = cm ? Number(cm[1]) : null;
+      const aliases = [
+        { keys: ["हिंदी", "hindi"], names: ["हिंदी", "Hindi"] },
+        { keys: ["गणित", "math", "maths"], names: ["गणित", "Math", "Mathematics"] },
+        { keys: ["अंग्रेजी", "अंग्रेज़ी", "english"], names: ["English", "अंग्रेजी", "अंग्रेज़ी"] },
+        { keys: ["विज्ञान", "science"], names: ["विज्ञान", "Science"] },
+        { keys: ["सामाजिक विज्ञान", "social science"], names: ["सामाजिक विज्ञान", "Social Science"] },
+        { keys: ["पर्यावरण", "evs"], names: ["पर्यावरण अध्ययन (EVS)", "पर्यावरण अध्ययन", "EVS"] }
+      ];
+      if (chosenClass && subjects && subjects[String(chosenClass)]) {
+        const available = Object.keys(subjects[String(chosenClass)]);
+        const match = aliases.find(item => item.keys.some(key => text.toLowerCase().includes(key.toLowerCase())));
+        const subject = match && available.find(name =>
+          match.names.some(alias => name.toLowerCase() === alias.toLowerCase()) ||
+          match.keys.some(key => name.toLowerCase().includes(key.toLowerCase()))
+        );
+        if (subject && typeof showClassChapters === "function") {
+          showClassChapters(chosenClass, subject);
+          say(subject + " खोल दिया है");
+        } else {
+          say("इस कक्षा में वह विषय नहीं मिला");
+        }
+      } else {
+        say("पहले कक्षा चुनिए, फिर विषय बोलिए");
+      }
+      return;
+    }
+
+    // Levels खोलना
+    if (/(?:levels?|लेवल्स?)\s*(?:खोलो|खोलिए|दिखाओ)|सभी लेवल/.test(text)) {
+      if (typeof showLevels === "function") {
+        showLevels();
+        say("सभी लेवल खोल दिए हैं");
+      } else {
+        say("लेवल का विकल्प नहीं मिला");
+      }
+      return;
+    }
+
+    // Test Paper खोलना
+    if (/(?:test paper|टेस्ट पेपर)\s*(?:खोलो|खोलिए|शुरू करो)?/.test(text)) {
+      if (typeof startTestPaper === "function") {
+        startTestPaper();
+      } else {
+        say("Test Paper का विकल्प नहीं मिला");
+      }
+      return;
+    }
+
+    // Test Result दिखाना
+    if (/(?:result|रिजल्ट|परिणाम)\s*(?:दिखाओ|खोलो|बताओ)?/.test(text)) {
+      if (typeof showTestResult === "function") {
+        showTestResult();
+      } else {
+        say("Result का विकल्प नहीं मिला");
+      }
+      return;
+    }
+
+    // माइक बंद करना
+    if (/(?:mic|माइक|माइक्रोफोन)\s*(?:बंद|रोक)\s*(?:करो|करिए)?/.test(text)) {
+      stopListening();
+      say("माइक बंद कर दिया है");
+      return;
+    }
+
+    // अध्याय और लेवल खोलना — वर्तमान पेज के बटनों पर क्लिक
+    const chapterMatch = text.match(/(?:अध्याय|chapter|पाठ(?:\s*नंबर)?)\s*(\d+)/i);
+    if (chapterMatch) {
+      const n = Number(chapterMatch[1]);
+      const buttons = [...document.querySelectorAll("button")];
+      const target = buttons.find(b => new RegExp("(?:अध्याय|पाठ)\\s*" + n + "(?:\\D|$)|chapter\\s*" + n + "(?:\\D|$)", "i").test(b.innerText));
+      if (target) target.click();
+      else say("यह अध्याय इस स्क्रीन पर नहीं मिला");
+      return;
+    }
+
+    const levelMatch = text.match(/(?:लेवल|लेबल|level)\s*(\d+)/i);
+    if (levelMatch) {
+      const n = Number(levelMatch[1]);
+
+      if (n < 1 || n > 1000) {
+        say("लेवल 1 से 1000 के बीच चुनिए");
+        return;
+      }
+
+      // कक्षा के खुले अध्याय के लेवल को पहले देखें
+      const classBox = document.getElementById("classMenuOverlay");
+      if (classBox && getComputedStyle(classBox).display !== "none") {
+        const classButtons = [...classBox.querySelectorAll("button")];
+        const classTarget = classButtons.find(b =>
+          new RegExp("लेवल\\s*" + n + "(?!\\d)", "i").test(b.innerText)
+        );
+
+        if (classTarget) {
+          classTarget.click();
+          return;
+        }
+
+        if (typeof window.classBackToLevels === "function") {
+          window.classBackToLevels();
+          say("लेवल की सूची खुल गई है। अब लेवल नंबर फिर से बोलिए।");
+          return;
+        }
+
+        say("पहले कक्षा के अध्याय की लेवल सूची खोलिए");
+        return;
+      }
+
+      const levelList = document.getElementById("levelList");
+
+      if (levelList && typeof playLevel === "function") {
+        const unlocked = n === 1 || !!localStorage.getItem("level" + (n - 1) + "Played");
+
+        if (unlocked) {
+          playLevel(n);
+        } else {
+          say("यह लेवल लॉक है। पहले पिछला लेवल पूरा करें");
+        }
+        return;
+      }
+
+      const buttons = [...document.querySelectorAll("button")];
+      const target = buttons.find(b =>
+        new RegExp("(?:लेवल|लेबल|level)\\s*" + n + "(?!\\d)", "i").test(b.innerText)
+      );
+
+      if (target) target.click();
+      else say("पहले Levels वाला पेज खोलिए");
+      return;
+    }
+
+    say("कमांड समझ नहीं आया। फिर से बोलिए।");
+  }
+
+  function startListening() {
+    if (!Recognition) {
+      alert("भाई, Chrome में गेम खोलो और माइक्रोफ़ोन की अनुमति दो।");
+      return;
+    }
+    if (listening || restarting) return;
+
+    recognition = new Recognition();
+    recognition.lang = "hi-IN";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    listening = true;
+    button.textContent = "🎙️ सुन रहा हूँ — रोकने के लिए दबाएँ";
+
+    recognition.onresult = event => {
+      const result = event.results[event.results.length - 1];
+      if (result && result.isFinal) runCommand(result[0].transcript);
+    };
+
+    recognition.onerror = event => {
+      console.log("Voice recognition error:", event.error);
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        listening = false;
+        button.textContent = "🎤";
+        alert("Chrome में माइक्रोफ़ोन की अनुमति दें।");
+      }
+    };
+
+    recognition.onend = () => {
+      if (listening) {
+        restarting = true;
+        setTimeout(() => {
+          restarting = false;
+          if (listening && recognition) {
+            try { recognition.start(); }
+            catch (e) { console.log("Mic restart:", e); }
+          }
+        }, 700);
+      } else {
+        button.textContent = "🎤";
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      listening = false;
+      button.textContent = "🎤";
+      alert("माइक शुरू नहीं हुआ। बटन फिर दबाएँ।");
+    }
+  }
+
+  function stopListening() {
+    listening = false;
+    restarting = false;
+    if (recognition) {
+      try { recognition.stop(); } catch (e) {}
+    }
+    button.textContent = "🎤";
+  }
+
+  button.onclick = () => {
+    if (listening) stopListening();
+    else startListening();
+  };
+
+  window.addEventListener("pagehide", stopListening);
+}
+
+window.addEventListener("load", installBrijeshVoiceControl);
+
+
+let classMenuOverlay = null;
+
+function getClassMenu() {
+  if (!classMenuOverlay) {
+    classMenuOverlay = document.createElement("div");
+    classMenuOverlay.id = "classMenuOverlay";
+    classMenuOverlay.style.cssText =
+      "position:fixed;inset:0;z-index:9999;background:#101827;color:white;" +
+      "overflow:auto;padding:20px;box-sizing:border-box;text-align:center;";
+    document.body.appendChild(classMenuOverlay);
+  }
+  return classMenuOverlay;
+}
+
+function showClasses() {
+  const box = getClassMenu();
+  let html = "<h2>📚 अपनी कक्षा चुनें</h2>";
+  for (let c = 1; c <= 10; c++) {
+    html += `<button class="start" style="margin:6px" onclick="showClassSubjects(${c})">कक्षा ${c}</button>`;
+  }
+  html += '<p><button class="start" onclick="closeClassMenu()">⬅ वापस गेम में</button></p>';
+  box.innerHTML = html;
+  box.style.display = "block";
+}
+
+function closeClassMenu() {
+  if (classMenuOverlay) classMenuOverlay.style.display = "none";
+}
+
+
+function toggleCoinsForClassGame(showClassGame) {
+  const coin = document.getElementById("coins");
+  if (!coin) return;
+  const parent = coin.parentElement;
+  if (parent) parent.style.display = showClassGame ? "none" : "";
+}
+
+function showClassSubjects(classNo) {
+  const box = getClassMenu();
+  const subjects = window.chapterData && chapterData[String(classNo)];
+  if (!subjects) {
+    box.innerHTML = `<h2>कक्षा ${classNo}</h2><p>इस कक्षा के विषयों की जानकारी नहीं मिली।</p>
+      <button class="start" onclick="showClasses()">⬅ कक्षाएँ</button>`;
+    return;
+  }
+  let html = `<h2>📚 कक्षा ${classNo} के विषय</h2>`;
+  for (const subject of Object.keys(subjects)) {
+    const book = window.upGovernmentBooks?.[String(classNo)]?.[subject];
+    const label = book ? `${subject} — ${book}` : subject;
+    html += `<button class="start" style="display:block;margin:10px auto" onclick="showClassChapters(${classNo},${JSON.stringify(subject).replace(/"/g,'&quot;')})">${label}</button>`;
+  }
+  html += '<p><button class="start" onclick="showClasses()">⬅ वापस कक्षा चुनें</button></p>';
+  box.innerHTML = html;
+}
+
+
+function classSubjectId(classNo, subject) {
+  return "class_" + classNo + "_subject_" + subject;
+}
+
+function classSubjectCoins(classNo, subject) {
+  const key = classSubjectId(classNo, subject) + ":coins";
+  return Number(localStorage.getItem(key) || 0);
+}
+
+function renderClassCoinBank(classNo, subject) {
+  const coins = classSubjectCoins(classNo, subject);
+  const progress = Math.min(100, coins / 1000 * 100);
+  return `<div style="background:#123c2b;color:white;padding:14px;margin:12px auto;border-radius:12px;max-width:420px;text-align:center">
+    <h3 style="margin:4px">🏦 आपका कॉइन बैंक</h3>
+    <p style="font-size:22px;margin:8px">🪙 <span id="classCoinCount">${coins}</span> / 1000 कॉइन</p>
+    <div style="height:12px;background:#ddd;border-radius:8px;overflow:hidden">
+      <div style="height:12px;width:${progress}%;background:#ffc107"></div>
+    </div>
+    <p style="margin:8px 0 0">${coins >= 1000 ? "🎉 टेस्ट पेपर अनलॉक हो गया!" : "सही जवाब देकर कॉइन कमाएँ"}</p>
+  </div>`;
+}
+
+function showClassChapters(classNo, subject) {
+  const box = getClassMenu();
+  const chapterList = chapterData[String(classNo)]?.[subject] || [];
+  let html = `<h2>कक्षा ${classNo} — ${subject}</h2>`;
+  html += renderClassCoinBank(classNo, subject);
+  for (const chapter of chapterList) {
+    html += `<button class="start" style="display:block;margin:10px auto" onclick="showClassChapterLevels(${classNo},${JSON.stringify(subject).replace(/"/g,'&quot;')},${chapter.id})">अध्याय ${chapter.id}: ${chapter.name}</button>`;
+  }
+  html += `<p><button class="start" onclick="showClassSubjects(${classNo})">⬅ वापस विषय चुनें</button></p>`;
+  box.innerHTML = html;
+}
+
+async function showClassChapterLevels(classNo, subject, chapterId) {
+  const box = getClassMenu();
+  const chapter = (chapterData[String(classNo)]?.[subject] || []).find(x => String(x.id) === String(chapterId));
+  if (!chapter) return;
+
+  box.innerHTML = "<h2>लेवल लोड हो रहे हैं...</h2>";
+
+  try {
+    const response = await fetch("class-data/questions.json?v=" + Date.now());
+    if (!response.ok) throw new Error("सवालों की फाइल नहीं खुली");
+
+    const data = await response.json();
+    const chapterQuestions =
+        data[String(classNo)]?.subjects?.[subject]?.[String(chapterId)] || {};
+
+      const levelData = Array.isArray(chapterQuestions)
+        ? Object.fromEntries(chapterQuestions.map((qs, i) => [String(i + 1), qs]))
+        : (chapterQuestions.levels || chapterQuestions);
+
+      const levels = Object.keys(levelData)
+        .filter(k => Array.isArray(levelData[k]) && levelData[k].length > 0)
+        .map(Number)
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+
+    let html = `<h2>कक्षा ${classNo}</h2><h3>${subject}</h3><p>${chapter.name}</p>`;
+    html += renderClassCoinBank(classNo, subject);
+
+    if (levels.length === 0) {
+      html += "<p>इस अध्याय में अभी सवाल नहीं जोड़े गए हैं।</p>";
+    }
+
+    for (const level of levels) {
+      const previousKey = "classLevelPlayed:" + classNo + ":" + subject + ":" + chapterId + ":" + (level - 1);
+      const locked = level > 1 && localStorage.getItem(previousKey) !== "true";
+      const icon = locked ? "🔒 " : "🟢 ";
+      html += `<button class="start" style="margin:6px" onclick="openClassQuestions(${classNo},${JSON.stringify(subject).replace(/"/g,'&quot;')},${chapterId},${level})">${icon}लेवल ${level}</button>`;
+    }
+
+    html += `<p><button class="start" onclick="showClassChapters(${classNo},${JSON.stringify(subject).replace(/"/g,'&quot;')})">⬅ वापस अध्याय चुनें</button></p>`;
+    box.innerHTML = html;
+  } catch (error) {
+    box.innerHTML = "<p>लेवल लोड नहीं हुए। इंटरनेट/सर्वर जाँचें और फिर कोशिश करें।</p>";
+  }
+}
+
+async function openClassQuestions(classNo, subject, chapterId, level) {
+  const box = getClassMenu();
+  const previousKey = "classLevelPlayed:" + classNo + ":" + subject + ":" + chapterId + ":" + (level - 1);
+  if (level > 1 && localStorage.getItem(previousKey) !== "true") {
+    box.innerHTML = "<h2>🔒 यह लेवल लॉक है</h2><p>पहले पिछला लेवल पूरा करें।</p><button class='start' onclick='showClasses()'>⬅ वापस</button>";
+    if (typeof speakText === "function") speakText("यह लेवल लॉक है। पहले पिछला लेवल पूरा करें।");
+    return;
+  }
+  let classTimer = null;
+
+  try {
+    const response = await fetch("class-data/questions.json?v=" + Date.now());
+    if (!response.ok) throw new Error("सवालों की फाइल नहीं खुली");
+
+    const data = await response.json();
+    const chapterQuestions =
+      data[String(classNo)]?.subjects?.[subject]?.[String(chapterId)] || {};
+
+    const levelData = Array.isArray(chapterQuestions)
+      ? Object.fromEntries(chapterQuestions.map((qs, i) => [String(i + 1), qs]))
+      : (chapterQuestions.levels || chapterQuestions);
+
+    const questions = levelData[String(level)] || [];
+
+    if (!questions.length) {
+      box.innerHTML = `<h2>📖 सवाल अभी तैयार नहीं हैं</h2>
+        <p>कक्षा ${classNo} — ${subject}</p>
+        <p>अध्याय ${chapterId}, लेवल ${level}</p>
+        <p>इस लेवल के सवाल अभी जोड़ने बाकी हैं।</p>
+        <button class="start" onclick="showClassChapterLevels(${classNo},${JSON.stringify(subject).replace(/"/g,'&quot;')},${chapterId})">⬅ लेवल</button>`;
+      return;
+    }
+
+    let i = 0, score = 0, answered = false, seconds = 10;
+    const subjectArg = JSON.stringify(subject).replace(/"/g, '&quot;');
+
+    function stopClassTimer() {
+      if (classTimer !== null) {
+        clearInterval(classTimer);
+        classTimer = null;
+      }
+    }
+
+    function addNextButton() {
+      if (!box.querySelector("#classNext")) {
+        const next = document.createElement("button");
+        next.id = "classNext";
+        next.className = "start";
+        next.innerText = i === questions.length - 1 ? "परिणाम देखें" : "अगला सवाल";
+        next.onclick = () => {
+          stopClassTimer();
+          i++;
+          render();
+        };
+        box.appendChild(next);
+      }
+    }
+
+    function finishQuestionByTimeout() {
+      if (answered || i >= questions.length) return;
+      answered = true;
+      stopClassTimer();
+
+      const q = questions[i];
+      const buttons = box.querySelectorAll(".class-answer");
+      buttons.forEach((b, n) => {
+        b.disabled = true;
+        if (n === q.answer) b.style.background = "#2196f3";
+      });
+
+      const feedback = box.querySelector("#classFeedback");
+      if (feedback) feedback.innerText = "⏰ समय समाप्त! सही जवाब: " + q.options[q.answer];
+
+      if (typeof speakText === "function") {
+        speakText("समय समाप्त। सही जवाब है " + q.options[q.answer]);
+      } else if ("speechSynthesis" in window) {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance("समय समाप्त। सही जवाब है " + q.options[q.answer]);
+        u.lang = "hi-IN";
+        speechSynthesis.speak(u);
+      }
+      addNextButton();
+    }
+
+    function startClassTimer() {
+      stopClassTimer();
+      seconds = 10;
+      const timerDisplay = box.querySelector("#classTimer");
+      if (timerDisplay) timerDisplay.innerText = "⏱️ समय: " + seconds + " सेकंड";
+
+      classTimer = setInterval(() => {
+        if (answered) {
+          stopClassTimer();
+          return;
+        }
+
+        // हर सेकंड छोटी टिक-टिक की आवाज़
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            window.classTickAudio = window.classTickAudio || new AudioCtx();
+            const ctx = window.classTickAudio;
+            if (ctx.state === "suspended") ctx.resume();
+
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+            oscillator.type = "square";
+            oscillator.frequency.value = 1000;
+            gain.gain.setValueAtTime(0.06, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+            oscillator.connect(gain);
+            gain.connect(ctx.destination);
+            oscillator.start();
+            oscillator.stop(ctx.currentTime + 0.06);
+          }
+        } catch (e) {}
+
+        seconds--;
+        const display = box.querySelector("#classTimer");
+        if (display) display.innerText = "⏱️ समय: " + seconds + " सेकंड";
+
+        if (seconds <= 0) finishQuestionByTimeout();
+      }, 1000);
+    }
+
+    function render() {
+      stopClassTimer();
+
+      if (i >= questions.length) {
+        localStorage.setItem("classLevelPlayed:" + classNo + ":" + subject + ":" + chapterId + ":" + level, "true");
+        if ("speechSynthesis" in window) speechSynthesis.cancel();
+        box.innerHTML = `<h2>🎉 टेस्ट पूरा हुआ!</h2>
+          <p>सही जवाब: ${score}/${questions.length}</p>
+          <p>🪙 इस टेस्ट में मिले कॉइन: ${score * 10}</p>
+          <p>कुल कॉइन: ${classSubjectCoins(classNo, subject)}</p>
+          <button class="start" onclick="showClassChapterLevels(${classNo},${subjectArg},${chapterId})">⬅ वापस</button>
+          <button class="start" onclick="showClasses()">📚 कक्षा चुनें</button>`;
+        if (typeof speakText === "function") speakText("टेस्ट पूरा हुआ। सही जवाब " + score + " हैं।");
+        return;
+      }
+
+      answered = false;
+      const q = questions[i];
+
+      let html = `<h2>कक्षा ${classNo} — ${subject}</h2>
+        <p>अध्याय ${chapterId}, लेवल ${level}</p>
+        <p>🪙 कॉइन: <b id="classCoinCount">${classSubjectCoins(classNo, subject)}</b></p>
+        <p id="classTimer">⏱️ समय: 10 सेकंड</p>
+        <h3>प्रश्न ${i+1}/${questions.length}: ${q.q}</h3>
+        <p id="classFeedback"></p>`;
+
+      q.options.forEach((option, index) => {
+        const letter = String.fromCharCode(65 + index);
+        html += `<button class="start class-answer" disabled style="display:block;margin:10px auto" onclick="answerClassQuestion(${index})">${letter}. ${option}</button>`;
+      });
+
+      html += `<button class="start" id="classBackButton" style="display:block;margin:12px auto" onclick="classBackToLevels()">⬅ Back</button>`;
+
+      box.innerHTML = html;
+      window.classBackToLevels = function() {
+        stopClassTimer();
+        if ("speechSynthesis" in window) speechSynthesis.cancel();
+        showClassChapterLevels(classNo, subject, chapterId);
+      };
+
+      const spokenText = "प्रश्न " + (i + 1) + "। " + q.q +
+        "। A. " + q.options[0] +
+        "। B. " + q.options[1] +
+        "। C. " + q.options[2] +
+        "। D. " + q.options[3];
+
+      function enableAnswersAndTimer() {
+        if (answered) return;
+        box.querySelectorAll(".class-answer").forEach(btn => btn.disabled = false);
+        startClassTimer();
+      }
+
+      if (typeof speakText === "function") {
+        speakText(spokenText, enableAnswersAndTimer);
+      } else if ("speechSynthesis" in window) {
+        speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(spokenText);
+        utterance.lang = "hi-IN";
+        utterance.onend = enableAnswersAndTimer;
+        speechSynthesis.speak(utterance);
+      } else {
+        enableAnswersAndTimer();
+      }
+    }
+
+    window.answerClassQuestion = function(answer) {
+      if (answered || i >= questions.length) return;
+
+      answered = true;
+      stopClassTimer();
+
+      const q = questions[i];
+      const buttons = box.querySelectorAll(".class-answer");
+
+      buttons.forEach((b, n) => {
+        b.disabled = true;
+        if (n === q.answer) b.style.background = "#2196f3";
+        if (n === answer && answer !== q.answer) {
+          b.style.background = "#ef4444";
+          b.style.color = "white";
+        }
+      });
+
+      if (answer === q.answer) {
+        score++;
+        const subjectCoinsKey = classSubjectId(classNo, subject) + ":coins";
+        const coinsNow = classSubjectCoins(classNo, subject) + 10;
+        localStorage.setItem(subjectCoinsKey, String(coinsNow));
+
+        const display = box.querySelector("#classCoinCount");
+        if (display) display.innerText = coinsNow;
+
+        const feedback = box.querySelector("#classFeedback");
+        if (feedback) feedback.innerText = "✅ सही है! 10 कॉइन मिले।";
+        if (typeof speakText === "function") speakText("सही है! आपको 10 कॉइन मिले।");
+      } else {
+        const feedback = box.querySelector("#classFeedback");
+        if (feedback) feedback.innerText = "❌ गलत है! सही जवाब: " + q.options[q.answer];
+        if (typeof speakText === "function") {
+          speakText("गलत है। सही जवाब है " + q.options[q.answer]);
+        }
+      }
+
+      addNextButton();
+    };
+
+    render();
+  } catch (e) {
+    console.error(e);
+    if (classTimer !== null) clearInterval(classTimer);
+    box.innerHTML = '<p>सवालों की फाइल पढ़ने में समस्या हुई।</p><button class="start" onclick="showClasses()">⬅ वापस</button>';
+  }
+}
+</script>
+
+</body>
+</html>
+
