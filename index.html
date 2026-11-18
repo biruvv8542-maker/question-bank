@@ -1257,7 +1257,7 @@ async function showClassChapterLevels(classNo, subject, chapterId) {
   box.innerHTML = "<h2>लेवल लोड हो रहे हैं...</h2>";
 
   try {
-    const response = await fetch("class-data/questions.json?v=" + Date.now());
+    const response = await fetch("https://biruvv8542-maker.github.io/question-bank/class-data/questions.json?v=" + Date.now());
     if (!response.ok) throw new Error("सवालों की फाइल नहीं खुली");
 
     const data = await response.json();
@@ -1306,7 +1306,7 @@ async function openClassQuestions(classNo, subject, chapterId, level) {
   let classTimer = null;
 
   try {
-    const response = await fetch("class-data/questions.json?v=" + Date.now());
+    const response = await fetch("https://biruvv8542-maker.github.io/question-bank/class-data/questions.json?v=" + Date.now());
     if (!response.ok) throw new Error("सवालों की फाइल नहीं खुली");
 
     const data = await response.json();
