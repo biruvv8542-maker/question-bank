@@ -374,51 +374,60 @@ let finished=false;
 let timer=null;
 
 function finish(){
- if(finished)return;
- finished=true;
- if(timer)clearTimeout(timer);
- if(typeof done==="function")done();
+if(finished)return;
+finished=true;
+if(timer)clearTimeout(timer);
+if(typeof done==="function")done();
 }
 
 try{
- if(!("speechSynthesis" in window) ||
-    !("SpeechSynthesisUtterance" in window)){
-   console.error("Browser speech synthesis available nahi hai");
-   finish();
-   return;
- }
+text=String(text);
 
- speechSynthesis.cancel();
+if(window.AndroidTTS && typeof window.AndroidTTS.speak==="function"){
+window.AndroidTTS.speak(text);
+timer=setTimeout(finish,Math.min(20000,Math.max(3000,text.length*110)));
+return;
+}
 
- let voice=new SpeechSynthesisUtterance(String(text));
- voice.lang="hi-IN";
- voice.rate=0.85;
- voice.pitch=1;
- voice.volume=1;
+if(!("speechSynthesis" in window) ||
+ !("SpeechSynthesisUtterance" in window)){
+console.error("Voice available nahi hai");
+finish();
+return;
+}
 
- let voices=speechSynthesis.getVoices();
- let hindiVoice=voices.find(v=>/^hi(-|_)/i.test(v.lang));
- if(hindiVoice)voice.voice=hindiVoice;
+if ("speechSynthesis" in window) speechSynthesis.cancel();
 
- voice.onend=finish;
- voice.onerror=function(e){
-   console.error("Voice error:",e.error);
-   finish();
- };
+let voice=new SpeechSynthesisUtterance(text);
+voice.lang="hi-IN";
+voice.rate=0.85;
+voice.pitch=1;
+voice.volume=1;
 
- timer=setTimeout(function(){
-   if(!finished){
-     console.warn("Voice timeout");
-     finish();
-   }
- },20000);
+let voices=speechSynthesis.getVoices();
+let hindiVoice=voices.find(v=>/^hi(-|_)/i.test(v.lang));
+if(hindiVoice)voice.voice=hindiVoice;
 
- speechSynthesis.speak(voice);
+voice.onend=finish;
+voice.onerror=function(e){
+console.error("Voice error:",e.error);
+finish();
+};
+
+timer=setTimeout(function(){
+if(!finished){
+console.warn("Voice timeout");
+finish();
+}
+},20000);
+
+speechSynthesis.speak(voice);
 }catch(e){
- console.error("Voice error:",e);
- finish();
+console.error("Voice error:",e);
+finish();
 }
 }
+
 function tickSound(){
 
 if(!audioCtx)return;
@@ -438,9 +447,12 @@ o.stop(audioCtx.currentTime+0.08);
 
 function startGame(){
 
-speechSynthesis.cancel();
+if ("speechSynthesis" in window) speechSynthesis.cancel();
 
-audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+let AudioCtx=window.AudioContext||window.webkitAudioContext;
+if(AudioCtx && !audioCtx){
+try{audioCtx=new AudioCtx();}catch(e){audioCtx=null;}
+}
 
 let selectedLevel=Number(new URLSearchParams(location.search).get("level")||1);
 
@@ -472,7 +484,7 @@ showQuestion();
 function showQuestion(){
 
 clearInterval(timer);
-speechSynthesis.cancel();
+if ("speechSynthesis" in window) speechSynthesis.cancel();
 
 if(currentQuestion>=questions.length){
 endGame();
@@ -490,7 +502,7 @@ home.className="start";
 home.innerText="📝 Test Paper"; home.style.display=coins>=1000 ? "inline-block" : "none"; home.onclick=function(){ startTestPaper(); };
 home.onclick=function(){
 clearInterval(timer);
-speechSynthesis.cancel();
+if ("speechSynthesis" in window) speechSynthesis.cancel();
 showLevels();
 };
 
@@ -568,7 +580,7 @@ timeOut();
 function checkAnswer(index){
 
 clearInterval(timer);
-speechSynthesis.cancel();
+if ("speechSynthesis" in window) speechSynthesis.cancel();
 
 let q=questions[currentQuestion];
 
@@ -639,7 +651,7 @@ document.getElementById("options").appendChild(next);
 
 function timeOut(){
 
-speechSynthesis.cancel();
+if ("speechSynthesis" in window) speechSynthesis.cancel();
 
 let q=questions[currentQuestion];
 
@@ -771,7 +783,7 @@ location.href="?level=2";
 }
 function endGame(){
 
-speechSynthesis.cancel();
+if ("speechSynthesis" in window) speechSynthesis.cancel();
 
 localStorage.setItem("level"+currentLevel+"Played","yes");
 
