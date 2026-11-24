@@ -1099,7 +1099,33 @@ function installBrijeshVoiceControl() {
     say("कमांड समझ नहीं आया। फिर से बोलिए।");
   }
 
+  window.addEventListener("AndroidVoiceResult", function(event) {
+    const heard = event && event.detail;
+    if (typeof heard === "string" && heard.trim()) runCommand(heard);
+  });
+
+  window.addEventListener("AndroidVoiceStopped", function() {
+    listening = false;
+    restarting = false;
+    button.textContent = "🎤";
+  });
+
   function startListening() {
+    if (window.AndroidTTS &&
+        typeof window.AndroidTTS.startListening === "function") {
+      if (listening || restarting) return;
+      listening = true;
+      button.textContent = "🎙️ सुन रहा हूँ — रोकने के लिए दबाएँ";
+      try {
+        window.AndroidTTS.startListening();
+      } catch (e) {
+        listening = false;
+        button.textContent = "🎤";
+        console.log("Android mic error:", e);
+      }
+      return;
+    }
+
     if (!Recognition) {
       alert("भाई, Chrome में गेम खोलो और माइक्रोफ़ोन की अनुमति दो।");
       return;
@@ -1154,6 +1180,10 @@ function installBrijeshVoiceControl() {
   function stopListening() {
     listening = false;
     restarting = false;
+    if (window.AndroidTTS &&
+        typeof window.AndroidTTS.stopListening === "function") {
+      try { window.AndroidTTS.stopListening(); } catch (e) {}
+    }
     if (recognition) {
       try { recognition.stop(); } catch (e) {}
     }
